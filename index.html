@@ -1,0 +1,2609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>徐一鸣 Xu Yiming — 产品设计师 Product Designer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- cinematic-editorial -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: {
+          sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        },
+      } },
+    };
+  </script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.14.2/gsap.min.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.14.2/ScrollTrigger.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #0A0A0A;
+      color: #E5E5E5;
+      font-family: 'Manrope', sans-serif;
+      overflow-x: hidden;
+    }
+    
+    /* Loading screen */
+    #loading {
+      position: fixed; inset: 0; z-index: 50;
+      background: #0A0A0A;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.4s ease-out, visibility 0.4s;
+    }
+    body[data-loaded="true"] #loading {
+      opacity: 0; visibility: hidden; pointer-events: none;
+    }
+    .loader-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem; letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Arc Reveal Hero Overlay */
+    #arc-reveal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: #E5E5E5;
+      overflow: hidden;
+      opacity: 1;
+      transition: opacity 0.18s ease-out;
+    }
+    #arc-reveal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .arc-greeting {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #0A0A0A;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.42s ease-out, transform 0.42s ease-out;
+    }
+    .arc-greeting.active {
+      opacity: 1;
+      transform: translate(-50%, -50%) translateY(0);
+    }
+    .arc-greeting.exit {
+      opacity: 0;
+      transform: translate(-50%, -50%) translateY(-32px);
+    }
+
+    .arc-curtain {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .arc-curtain path {
+      fill: #0A0A0A;
+    }
+
+    /* Content entrance animation after arc reveal */
+    .content-entrance {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .content-entrance.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Video background */
+    #video-bg {
+      position: fixed; inset: 0; z-index: 0;
+      background: #000;
+    }
+    #video-bg video {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 100%; min-height: 100%;
+      object-fit: cover;
+    }
+    
+    /* Overlay for tinting */
+    .video-overlay {
+      position: fixed; inset: 0; z-index: 1;
+      background: linear-gradient(180deg, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.6) 100%);
+      pointer-events: none;
+    }
+
+    /* Scroll-driven black overlay */
+    #scroll-overlay {
+      position: fixed; inset: 0; z-index: 2;
+      background: #0A0A0A;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s linear;
+    }
+    
+    /* Main content layer */
+    .content-layer {
+      position: relative; z-index: 10;
+      pointer-events: none;
+    }
+    .content-layer > * { pointer-events: auto; }
+    
+    /* Header */
+    header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+      padding: 1.5rem 2rem;
+      backdrop-filter: blur(20px);
+      background: rgba(10,10,10,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .nav-link {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+      transition: color 0.3s;
+      position: relative;
+    }
+    .nav-link:hover { color: #fff; transform: translateY(-1px); }
+    .nav-link::after {
+      content: ''; position: absolute; bottom: -4px; left: 0;
+      width: 0; height: 1px; background: #fff;
+      transition: width 0.3s ease-out;
+    }
+    .nav-link:hover::after { width: 100%; }
+
+    /* Nav link subtle bounce */
+    .nav-link {
+      transition: color 0.3s, transform 0.2s ease-out;
+    }
+    
+    /* Hero section */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center;
+      padding: 8rem 2rem 4rem;
+    }
+    
+    .hero-h1 {
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 300; line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    
+    .hero-description {
+      max-width: 600px;
+      margin-top: 2rem;
+      font-size: 1.125rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 0.75rem;
+      margin-top: 2.5rem;
+      padding: 0.875rem 2rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #fff;
+      transition: all 0.3s;
+    }
+    .hero-cta:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(255,255,255,0.1);
+    }
+    .hero-cta:active {
+      transform: translateY(0);
+    }
+
+    /* Button bounce animation */
+    @keyframes button-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .hero-cta.animate-bounce {
+      animation: button-bounce 0.6s ease-in-out;
+    }
+    
+    /* Scroll reveal */
+    .scroll-reveal { margin: 0; }
+    .scroll-reveal-text { display: flex; flex-wrap: wrap; margin: 0; }
+    .word { display: inline-block; white-space: normal; }
+
+    /* Reveal animation */
+    [data-reveal] {
+      opacity: 0;
+      transition:
+        opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: calc(var(--reveal-delay, 0) * 1s);
+    }
+    [data-reveal="visible"] { opacity: 1; }
+    
+    /* Section styling */
+    section {
+      padding: 6rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 300; line-height: 1.2;
+      color: #fff;
+      margin-bottom: 2rem;
+    }
+    
+    /* Project cards */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .project-card {
+      padding: 2rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+    }
+    .project-card:hover {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* Featured project card with images */
+    .project-card.featured {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .project-card.featured .project-content {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .project-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    /* Floating animation */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .project-images img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 4px;
+      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    }
+
+    .project-images img:hover {
+      transform: scale(1.02);
+    }
+
+    /* Certificate image: full opacity, no animation, fills right column */
+    .project-images .img-certificate {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      opacity: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .project-images .img-certificate:hover {
+      opacity: 1;
+    }
+
+    /* View Details Button */
+    .view-details-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: transparent;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .view-details-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Design Gallery Horizontal Scroll */
+    .design-gallery {
+      margin-bottom: 3rem;
+      padding: 0.5rem 0;
+      overflow: hidden;
+    }
+
+    .gallery-row {
+      display: flex;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      position: relative;
+      width: max-content;
+    }
+
+    .gallery-row-inner {
+      display: flex;
+      gap: 1rem;
+      animation: scroll-left 40s linear infinite;
+    }
+
+    .gallery-row:nth-child(2) .gallery-row-inner {
+      animation: scroll-left 55s linear infinite;
+    }
+
+    .gallery-row:hover .gallery-row-inner {
+      animation-play-state: paused;
+    }
+
+    @keyframes scroll-left {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+
+    .gallery-item {
+      flex: 0 0 auto;
+      width: 280px;
+      height: 180px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+      transition: all 0.3s ease-out;
+      cursor: pointer;
+    }
+
+    .gallery-item:hover {
+      transform: scale(1.05);
+      border-color: rgba(255,255,255,0.3);
+      box-shadow: 0 8px 30px rgba(255,255,255,0.1);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease-out;
+    }
+
+    .gallery-item:hover img {
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 768px) {
+      .gallery-item {
+        width: 220px;
+        height: 140px;
+      }
+    }
+
+    /* Image Lightbox */
+    #image-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-out, visibility 0.3s;
+      cursor: zoom-out;
+    }
+
+    #image-lightbox.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #image-lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 4px;
+      transform-origin: center center;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Circular Testimonials - 3D Carousel with Content */
+    .circular-testimonials {
+      grid-column: 1 / -1;
+      padding: 4rem 0;
+      max-width: 1456px;
+      margin: 0 auto;
+    }
+
+    .testimonial-grid {
+      display: grid;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    @media (min-width: 768px) {
+      .testimonial-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 5rem;
+      }
+    }
+
+    .image-container {
+      position: relative;
+      width: 100%;
+      height: 24rem;
+      perspective: 1000px;
+    }
+
+    .testimonial-image {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      transition: all 0.8s cubic-bezier(0.4, 2, 0.3, 1);
+      will-change: transform, opacity, filter;
+    }
+
+    .testimonial-image.frosted {
+      filter: blur(2px) brightness(1.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .testimonial-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 24rem;
+    }
+
+    @media (max-width: 767px) {
+      .testimonial-content {
+        min-height: auto;
+        justify-content: flex-start;
+      }
+    }
+
+    .testimonial-name {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #E5E5E5;
+      margin-bottom: 0.25rem;
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+
+    .testimonial-designation {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.925rem;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 2rem;
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+
+    .testimonial-quote {
+      font-size: 1.125rem;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.8);
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+
+    .testimonial-word {
+      display: inline-block;
+      transition: filter 0.22s ease-out, opacity 0.22s ease-out, transform 0.22s ease-out;
+    }
+
+    .arrow-buttons {
+      display: flex;
+      gap: 1.5rem;
+      padding-top: 0.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .arrow-buttons {
+        padding-top: 0;
+      }
+    }
+
+    .arrow-button {
+      width: 2.7rem;
+      height: 2.7rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      border: none;
+      background: rgba(255,255,255,0.05);
+      color: #E5E5E5;
+      font-size: 1.25rem;
+    }
+
+    .arrow-button:hover {
+      background: rgba(255,255,255,0.15);
+      transform: scale(1.05);
+    }
+
+    .arrow-button:active {
+      transform: scale(0.95);
+    }
+
+    /* Detail Page Modal */
+    #detail-modal,
+    #kuka-detail-modal,
+    #no1-detail-modal,
+    #aise-detail-modal,
+    #dream-island-detail-modal,
+    #aise-bed-detail-modal,
+    #grad-detail-modal,
+    #sleemon-detail-modal,
+    #sleep-band-detail-modal,
+    #touqi-detail-modal,
+    #catzz-detail-modal,
+    #aircon-detail-modal,
+    #factory-visit-detail-modal {
+      position: fixed; inset: 0; z-index: 100;
+      background: #0A0A0A;
+      overflow-y: auto;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.4s ease-out, visibility 0.4s;
+    }
+    #detail-modal.active,
+    #kuka-detail-modal.active,
+    #no1-detail-modal.active,
+    #aise-detail-modal.active,
+    #dream-island-detail-modal.active,
+    #aise-bed-detail-modal.active,
+    #grad-detail-modal.active,
+    #sleemon-detail-modal.active,
+    #sleep-band-detail-modal.active,
+    #touqi-detail-modal.active,
+    #catzz-detail-modal.active,
+    #aircon-detail-modal.active,
+    #factory-visit-detail-modal.active {
+      opacity: 1; visibility: visible;
+    }
+
+    .detail-close {
+      position: fixed; top: 1.5rem; right: 2rem; z-index: 110;
+      width: 48px; height: 48px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(10,10,10,0.8);
+      backdrop-filter: blur(20px);
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s;
+    }
+    .detail-close:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    /* Award badge in detail page */
+    .detail-award-badge {
+      position: fixed; top: 1.5rem; right: 6rem; z-index: 110;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .detail-award-badge img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    @media (max-width: 768px) {
+      .detail-award-badge {
+        width: 60px; height: 60px;
+        top: 1rem; right: 4rem;
+      }
+    }
+
+    .detail-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 6rem 2rem 4rem;
+    }
+
+    .detail-header {
+      margin-bottom: 3rem;
+    }
+
+    .detail-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 300; line-height: 1.2;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .detail-subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Main images grid */
+    .detail-main-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .detail-main-images img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #f5f5f5;
+    }
+
+    /* Alternative options */
+    .detail-alternatives-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 1.5rem;
+    }
+
+    .detail-alternatives {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .detail-alternatives img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.3s;
+    }
+    .detail-alternatives img:hover {
+      border-color: rgba(255,255,255,0.2);
+      transform: translateY(-4px);
+    }
+
+    @media (max-width: 768px) {
+      .detail-main-images {
+        grid-template-columns: 1fr;
+      }
+      .detail-alternatives {
+        grid-template-columns: 1fr;
+      }
+      .detail-close {
+        top: 1rem; right: 1rem;
+        width: 40px; height: 40px;
+      }
+    }
+
+    /* Product images: fully opaque, no animation */
+    .project-images .img-main {
+      grid-row: 1 / 3;
+      grid-column: 1;
+      opacity: 1;
+      background: #fff;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .project-images .img-secondary {
+      grid-column: 2;
+      opacity: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* AISE full-width banner section */
+    .aise-banner {
+      position: relative;
+      grid-column: 1 / -1;
+      aspect-ratio: 30 / 9;
+      overflow: hidden;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-top: 2rem;
+    }
+    .aise-banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .aise-banner-center {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 10;
+    }
+    .aise-banner-button {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .aise-view-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(10,10,10,0.4);
+      backdrop-filter: blur(20px);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .aise-view-btn:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.5);
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+      /* AISE banner uses aspect-ratio for responsive height */
+    }
+
+    .project-year {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 0.75rem;
+    }
+    
+    .project-name {
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    
+    .project-desc {
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .project-badge {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.375rem 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+    }
+    
+    /* Experience timeline */
+    .timeline {
+      margin-top: 3rem;
+    }
+    
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 2rem;
+      padding: 1.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    
+    .timeline-year {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.4);
+    }
+    
+    .timeline-content h3 {
+      font-size: 1.125rem;
+      font-weight: 500;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .timeline-content p {
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.6);
+    }
+    
+    /* Skills section */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .skill-item {
+      padding: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+    }
+
+    .skill-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 0.5rem;
+    }
+
+    .skill-level {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Portrait image in About section */
+    .portrait-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .portrait-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: grayscale(30%) contrast(1.1);
+      transition: filter 0.4s ease-out;
+    }
+    .portrait-container:hover img {
+      filter: grayscale(0%) contrast(1);
+    }
+    .portrait-container::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 60%, rgba(10,10,10,0.4) 100%);
+      pointer-events: none;
+    }
+    
+    /* Footer */
+    footer {
+      padding: 4rem 2rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 3rem;
+      margin-bottom: 3rem;
+    }
+    
+    .footer-col h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 1rem;
+    }
+    
+    .footer-col a {
+      display: block;
+      font-size: 0.9375rem;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      margin-bottom: 0.5rem;
+      transition: color 0.3s;
+    }
+    .footer-col a:hover { color: #fff; }
+    
+    .footer-bottom {
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.3);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      header { padding: 1rem; }
+      .hero { padding: 6rem 1.5rem 3rem; }
+      section { padding: 4rem 1.5rem; }
+      .timeline-item { grid-template-columns: 1fr; gap: 0.5rem; }
+      footer { padding: 3rem 1.5rem; }
+      .project-card.featured {
+        grid-template-columns: 1fr;
+      }
+      .project-images {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .project-images .img-main {
+        grid-row: auto;
+        grid-column: 1;
+      }
+      /* Mobile: hide certificate image for first card (Graduation Project) */
+      .project-card.featured:first-child .project-images .img-certificate {
+        display: none;
+      }
+      /* Mobile: hide certificate image for AI Air Sleep Mattress (3rd featured card) and show alt image */
+      .project-card.featured:nth-child(3) .project-images .img-certificate {
+        display: none;
+      }
+      .project-card.featured:nth-child(3) .project-images .img-mobile-alt {
+        display: block !important;
+        grid-column: 2;
+        grid-row: 1 / 3;
+        opacity: 1;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      /* Mobile: hide secondary images for cards 7, 8, 9 and show alt for card 11 */
+      .project-card.featured:nth-child(7) .project-images .img-secondary,
+      .project-card.featured:nth-child(8) .project-images .img-secondary,
+      .project-card.featured:nth-child(9) .project-images .img-secondary {
+        display: none;
+      }
+      /* Mobile: hide trophy for No.1 Mattress and show product image */
+      .project-card.featured[data-reveal][style*="--reveal-delay: 0.75"] .project-images .img-secondary,
+      .project-card.featured[data-reveal][style*="--reveal-delay: 0.75"] .project-images .img-main {
+        display: none;
+      }
+      .project-card.featured[data-reveal][style*="--reveal-delay: 0.75"] .project-images .img-mobile-alt {
+        display: block !important;
+        grid-column: 1;
+        grid-row: auto;
+        opacity: 1;
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Arc Reveal Hero Overlay -->
+  <div id="arc-reveal-overlay">
+    <div class="arc-greeting" id="arc-greeting"></div>
+    <svg class="arc-curtain" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path id="arc-path" d="M 0 110 Q 50 135 100 110 L 100 110 L 0 110 Z" />
+    </svg>
+  </div>
+
+  <!-- Loading screen -->
+  <div id="loading">
+    <span class="loader-text">LOADING 加载中</span>
+  </div>
+  
+  <!-- Background image -->
+  <div id="video-bg" style="background: url('https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-20/1781952452755-image-000.jpg?auth_key=950073df4143d46245ff9024e78fb412b4d006e1981e1fcdc865b67d6545cf7a') center center / cover no-repeat;">
+  </div>
+
+  <!-- Black overlay for scroll effect -->
+  <div id="scroll-overlay"></div>
+
+  <!-- Video overlay -->
+  <div class="video-overlay"></div>
+  
+  <!-- Header -->
+  <header>
+    <nav class="flex items-center justify-between max-w-7xl mx-auto">
+      <div class="font-mono text-xs tracking-widest text-white/60">徐一鸣 XU YIMING</div>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#work" class="nav-link">作品 Work</a>
+        <a href="#experience" class="nav-link">经历 Experience</a>
+        <a href="#about" class="nav-link">关于 About</a>
+        <a href="#contact" class="nav-link">联系 Contact</a>
+      </div>
+      <a href="mailto:2439653178@qq.com" class="nav-link">联系我 Get in Touch</a>
+    </nav>
+  </header>
+  
+  <!-- Main content -->
+  <main class="content-layer">
+    <!-- Hero section -->
+    <section class="hero content-entrance" style="transition-delay: 0.1s;">
+      <h1 class="hero-h1">
+        以克制，抵达简约。<br />
+        以秩序，诠释美学。
+      </h1>
+      <p class="hero-description">
+        中国产品设计师，毕业于<span class="font-semibold text-white">中国美术学院（CAA）</span>。
+        专注于卧室睡眠场景产品开发与智能化周边设计。在理性与感性之间，
+        用秩序构建美，用克制表达力量。
+      </p>
+    </section>
+
+    <!-- Philosophy section with scroll reveal -->
+    <section class="content-entrance" style="transition-delay: 0.2s;">
+      <h2 data-scroll-reveal data-text-class="font-medium tracking-tight text-white" style="font-size: clamp(1.5rem, 3vw, 2.5rem); line-height: 1.4;">
+        "对于生活的基本问题，并不存在所谓的特效药和快速解决的方法。思考的过程比思考的结论对我们的人生更有价值。"——克里斯坦森
+      </h2>
+    </section>
+
+    <!-- About section -->
+    <section id="about">
+      <div data-reveal style="--reveal-delay: 0">
+        <p class="section-label">关于 About</p>
+        <h2 class="section-title">简约与自然 Simple & Nature</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-12 mt-8">
+        <div data-reveal style="--reveal-delay: 0.1">
+          <!-- Portrait photo -->
+          <div class="portrait-container mb-6 aspect-[3/4] max-w-sm">
+            <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782032295757-IMG_3619_heic.webp?auth_key=0547f5441d0d3163919df74b407d3a90151bfd3ec66640d9845b42d0b63c1878" alt="徐一鸣肖像 Xu Yiming Portrait" />
+          </div>
+
+          <p class="text-lg leading-relaxed text-white/70 mb-6">
+            喜欢艺术，热爱发现新事物。我一直相信，美术家、平面设计师、工业设计师和建筑师之间，
+            在基础视觉关联上并没有根本区别。区别是每个设计领域中对于视觉关系的复杂程度有不同的需求。
+            除此之外，每个领域有不同的材料和技术，但是在视觉原则上，他们一定有适合所有领域的相通之处。
+          </p>
+          <blockquote class="border-l-2 border-white/20 pl-4 mt-4 italic text-white/60">
+            "这是基于一个令人兴奋的概念之上，那就是存在着一种秩序和结构去组织视觉表达"
+            <footer class="mt-1 text-sm not-italic text-white/40">— 罗伊娜·里德·科斯塔罗 Rowena Reed Kostellow</footer>
+          </blockquote>
+          <p class="text-lg leading-relaxed text-white/70">
+            我喜欢做一些极简但并不简单的事物。虽然有时候他们并不轻松。化繁为简的产品往往需要付出更多的努力。
+          </p>
+        </div>
+
+        <div data-reveal style="--reveal-delay: 0.2">
+          <p class="section-label mb-4">兴趣爱好 Interests</p>
+          <div class="space-y-2">
+            <p class="text-white/60">电影 Cinema</p>
+            <p class="text-white/60">羽毛球 Badminton</p>
+            <p class="text-white/60">卡丁车 Kart Racing（浙赛 0:51:12）</p>
+            <p class="text-white/60">音乐 Music</p>
+            <p class="text-white/60">阅读 Reading</p>
+            <p class="text-white/60">美食与烘焙 Food & Baking</p>
+          </div>
+
+          <p class="section-label mt-8 mb-4">软件技能 Digital Skills</p>
+          <div class="skills-grid">
+            <div class="skill-item">
+              <p class="skill-name">Adobe Illustrator</p>
+              <p class="skill-level">熟练 Advanced</p>
+            </div>
+            <div class="skill-item">
+              <p class="skill-name">Adobe Photoshop</p>
+              <p class="skill-level">熟练 Advanced</p>
+            </div>
+            <div class="skill-item">
+              <p class="skill-name">Keyshot</p>
+              <p class="skill-level">精通 Expert</p>
+            </div>
+            <div class="skill-item">
+              <p class="skill-name">Rhinoceros</p>
+              <p class="skill-level">精通 Expert</p>
+            </div>
+            <div class="skill-item">
+              <p class="skill-name">Vibe Coding</p>
+              <p class="skill-level">入门 Beginner</p>
+            </div>
+            <div class="skill-item">
+              <p class="skill-name">视频剪辑 Video Editing</p>
+              <p class="skill-level">入门 Beginner</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Work section -->
+    <section id="work">
+      <div data-reveal style="--reveal-delay: 0">
+        <p class="section-label">精选作品 Selected Work</p>
+        <h2 class="section-title">定义我设计旅程的项目<br />Projects that define my design journey</h2>
+      </div>
+
+      <!-- Design Gallery Horizontal Scroll -->
+      <div class="design-gallery" data-reveal style="--reveal-delay: 0.05">
+        <div class="gallery-row">
+          <div class="gallery-row-inner">
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175149-image4.jpeg?auth_key=1e02b85268a463bd20aea45288e41fcf032d44d4cd5309c315084a4df8c5eb53" alt="设计方案1" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175152-image5.jpeg?auth_key=de0fb764cc058f7952e87c5ec22981776105debdfcab8ed837ea63836b22a316" alt="设计方案2" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175152-image6.png?auth_key=58634a161c71d4a574023f546d1e2cd60f842f2d6ae55121359f0e79ebddc08c" alt="设计方案3" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175159-image7.jpeg?auth_key=bfd3894d2190031d5048902ce184d19f7e420874b887132c550f36f423951543" alt="设计方案4" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175159-image8.png?auth_key=eee94c4cc66cad63334f1a442642b679758d1980bdd1f4449ed575fcce729a31" alt="设计方案5" />
+            </div>
+            <!-- Duplicate for seamless loop -->
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175149-image4.jpeg?auth_key=1e02b85268a463bd20aea45288e41fcf032d44d4cd5309c315084a4df8c5eb53" alt="设计方案1" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175152-image5.jpeg?auth_key=de0fb764cc058f7952e87c5ec22981776105debdfcab8ed837ea63836b22a316" alt="设计方案2" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175152-image6.png?auth_key=58634a161c71d4a574023f546d1e2cd60f842f2d6ae55121359f0e79ebddc08c" alt="设计方案3" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175159-image7.jpeg?auth_key=bfd3894d2190031d5048902ce184d19f7e420874b887132c550f36f423951543" alt="设计方案4" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175159-image8.png?auth_key=eee94c4cc66cad63334f1a442642b679758d1980bdd1f4449ed575fcce729a31" alt="设计方案5" />
+            </div>
+          </div>
+        </div>
+        <div class="gallery-row">
+          <div class="gallery-row-inner">
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175165-image9.png?auth_key=022742927654149cb6ad9a8bebbcb9f6d33be4fab8fc13c2a3ab9eb8828af467" alt="设计方案6" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175166-image10.jpeg?auth_key=2b8d428bd42a1a13cb3014f38860ff2a87c5bd9c347082f4f8e23e8994ef75eb" alt="设计方案7" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175167-image11.png?auth_key=a8a26e45be2a33317a6e947ada20d90d179500c3c02ea36c438df110b14eb591" alt="设计方案8" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175173-image29.jpeg?auth_key=0d9a1bd3231fa45884d754fbc48aa440c050181048ba84f0519e6240e4fdcbe3" alt="设计方案9" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175172-image38.png?auth_key=f58fba134b44ecb1f4e034d31e82095e1ca5b899e4525256aebc8e7c50a46d2e" alt="设计方案10" />
+            </div>
+            <!-- Duplicate for seamless loop -->
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175165-image9.png?auth_key=022742927654149cb6ad9a8bebbcb9f6d33be4fab8fc13c2a3ab9eb8828af467" alt="设计方案6" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175166-image10.jpeg?auth_key=2b8d428bd42a1a13cb3014f38860ff2a87c5bd9c347082f4f8e23e8994ef75eb" alt="设计方案7" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175167-image11.png?auth_key=a8a26e45be2a33317a6e947ada20d90d179500c3c02ea36c438df110b14eb591" alt="设计方案8" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175173-image29.jpeg?auth_key=0d9a1bd3231fa45884d754fbc48aa440c050181048ba84f0519e6240e4fdcbe3" alt="设计方案9" />
+            </div>
+            <div class="gallery-item">
+              <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782321175172-image38.png?auth_key=f58fba134b44ecb1f4e034d31e82095e1ca5b899e4525256aebc8e7c50a46d2e" alt="设计方案10" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-grid">
+        <!-- 1. 2019 Graduation Project Featured Card -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.1">
+          <div class="project-content">
+            <p class="project-year">2019</p>
+            <h3 class="project-name">毕业设计<br />Graduation Project — CAA</h3>
+            <p class="project-desc">
+              中国美术学院毕业创作暨林风眠创作奖铜奖项目。
+              探索产品设计与艺术表达的融合边界。
+            </p>
+            <span class="project-badge">林风眠创作奖铜奖 Bronze Award</span>
+            <button class="view-details-btn" onclick="openGradDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images" style="grid-template-columns: 1fr; grid-template-rows: 1fr;">
+            <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782292361886-image12.jpeg?auth_key=50a030d350a954156a1edc047aacca9cfd0ecfb9e965acdf0667d2c232d1c887" alt="2019毕业设计作品展示" />
+          </div>
+        </div>
+
+        <!-- 2. Sleep Detection Band Design Module -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.2">
+          <div class="project-content">
+            <p class="project-year">2023</p>
+            <h3 class="project-name">睡眠检测带设计<br />Sleep Detection Band — SLEEMON</h3>
+            <p class="project-desc">
+              喜临门的一次大胆创意尝试。探索可穿戴设备与睡眠监测的融合边界，
+              将科技美学融入日常睡眠体验。
+            </p>
+            <span class="project-badge">概念设计 Concept Design</span>
+            <button class="view-details-btn" onclick="openSleepBandDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images" style="grid-template-columns: 1fr; grid-template-rows: 1fr;">
+            <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782310701519-image8.png?auth_key=6cf832a5b2f7a23fa2bef42c5286e49b20d36bb76272b282f9ef4a72ede8e4da" alt="喜临门睡眠检测带设计" />
+          </div>
+        </div>
+
+        <!-- 3. Featured Project: AI Air Sleep Mattress -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.3">
+          <div class="project-content">
+            <p class="project-year">2023</p>
+            <h3 class="project-name">AI空气能助眠床垫<br />AI Air Sleep Mattress</h3>
+            <p class="project-desc">
+              集成气压技术的智能睡眠系统。荣获深圳金汐奖最佳创新智能寝具金奖。
+              与诺贝尔物理奖获得者在北京联合发布。isleep 系列旗舰产品，
+              多层结构创新设计，重新定义智能睡眠体验。
+            </p>
+            <span class="project-badge">金汐奖金奖 Gold Award</span>
+            <button class="view-details-btn" onclick="openDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images">
+            <img class="img-main" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782033710205-image24.png?auth_key=ac3b2a087d36e7b36fe5b627ee8565117da0a123d23c5417f4ab22fbfcb3e8e7" alt="AI床垫爆炸图" />
+            <img class="img-certificate" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-20/1781953710054-image-042.jpg?auth_key=8f3b73fc65b7cd05c782e1cc325670b57b350335c484eba6b8837cf7ccade8e9" alt="金汐奖证书" />
+            <img class="img-mobile-alt" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019255995-image25.png?auth_key=877998177d2da8af45a06019b40e64d1b6e101087ef88cf72e690c6eb91b090f" alt="AI床垫产品外观" style="display: none;" />
+          </div>
+        </div>
+
+        <!-- 4. AISE Full-width Banner -->
+        <div class="aise-banner" data-reveal style="--reveal-delay: 0.4">
+          <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782288119411-image10.jpeg?auth_key=18312aabab5d4a1341ccc62928413c41571e70b63111ab99ef84a00d75c13006" alt="AISE 智能睡眠系统" />
+        </div>
+        <div class="aise-banner-button" data-reveal style="--reveal-delay: 0.42">
+          <button class="aise-view-btn" onclick="openAiseDetailPage()">
+            查看详情 View Details
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 5. AISE Soft Bed Full-width Banner -->
+        <div class="aise-banner" data-reveal style="--reveal-delay: 0.45">
+          <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782287288602-image11.png?auth_key=8f6c90aa7ba91c2e557a6dc850b553d9f0d484621356b0c3f5235c2062abff17" alt="AISE软床产品图" />
+        </div>
+        <div class="aise-banner-button" data-reveal style="--reveal-delay: 0.47">
+          <button class="aise-view-btn" onclick="openAiseBedDetailPage()">
+            查看详情 View Details
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 6. Circular Testimonials Section -->
+        <section class="circular-testimonials" data-reveal style="--reveal-delay: 0.5">
+          <div class="testimonial-grid">
+            <!-- Images Container -->
+            <div class="image-container" id="testimonial-image-container">
+              <img class="testimonial-image" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782398406127-image49.jpeg?auth_key=819d11147f1ddf868fe3b4e869b32281549f9cdd7f9747a987a387a25dc3c327" alt="喜临门深圳展会" data-index="0" />
+              <img class="testimonial-image" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782398697178-image50.jpeg?auth_key=e7fb2599db4bd6843865e726bf4d456c33a5511dd405c9188e46888e1985dbbb" alt="FSM欢乐颂护脊床垫" data-index="1" />
+              <img class="testimonial-image" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782398700191-image46.png?auth_key=b75c986757837843ff774da03177fe82e995cd00109225044687f8c1846b467e" alt="锦绣未央宫喜联名床垫" data-index="2" />
+            </div>
+
+            <!-- Content Container -->
+            <div class="testimonial-content">
+              <div id="testimonial-text-content">
+                <h3 class="testimonial-name" id="testimonial-name"></h3>
+                <p class="testimonial-designation" id="testimonial-designation"></p>
+                <p class="testimonial-quote" id="testimonial-quote"></p>
+              </div>
+              <div class="arrow-buttons">
+                <button class="arrow-button prev-button" id="testimonial-prev" aria-label="Previous">←</button>
+                <button class="arrow-button next-button" id="testimonial-next" aria-label="Next">→</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. Catzz Soft Bed -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.6">
+          <div class="project-content">
+            <p class="project-year">2025</p>
+            <h3 class="project-name">瞌睡猫软床<br />Catzz Soft Bed — Innovative Design</h3>
+            <p class="project-desc">
+              负责瞌睡猫产品时的创新设计作品。探索年轻化睡眠美学，
+              将趣味设计与舒适体验融合，打造专属年轻人的软床产品。
+            </p>
+            <span class="project-badge">创新设计 Innovation</span>
+            <button class="view-details-btn" onclick="openCatzzDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images" style="grid-template-columns: 1fr; grid-template-rows: 1fr;">
+            <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782312515789-1_52.png?auth_key=a35d1197df3356b581a86881dce9f4580da470a1c2a135d80a4f0e4085d05b75" alt="瞌睡猫软床产品图" />
+          </div>
+        </div>
+
+        <!-- 8. KUKA Children's Mattress -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.65">
+          <div class="project-content">
+            <p class="project-year">2025</p>
+            <h3 class="project-name">睡饱饱·双睡Pro<br />KUKA Children's Mattress M5036</h3>
+            <p class="project-desc">
+              专利O胶儿童床垫，北大儿科专家权威推荐。荣获2026质点奖卓越奖（最佳安全家具·弹簧软床垫类）。
+              KUKA电商渠道高客单价畅销产品，一垫两睡设计，亲肤无负担。
+            </p>
+            <span class="project-badge">质点奖卓越奖 Z-DOT Award</span>
+            <button class="view-details-btn" onclick="openKukaDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1fr;">
+            <img class="img-main" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782406912421-20251202顾家电商床垫18037.jpg?auth_key=7825dda9658fe47fef1cb504ab26b0ba0f734411a30fb528d92c826f4127e9f5" alt="KUKA儿童床垫产品图" />
+            <img class="img-secondary" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782138956620-质点睡饱饱.jpg?auth_key=cd9b50631481c5c2c1122550c81633529390e40a457919dbb950bd03d568de68" alt="质点奖卓越奖奖杯" />
+          </div>
+        </div>
+
+        <!-- 9. KUKA Dream Island Series -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.7">
+          <div class="project-content">
+            <p class="project-year">2025</p>
+            <h3 class="project-name">梦屿系列<br />KUKA Dream Island Series</h3>
+            <p class="project-desc">
+              KUKA电商最高端产品系列，全系采用0胶水工艺。可拆卸设计支持调节软硬等级，
+              左右分区独立睡感。KUKA电商唯一一款带顶垫且具有手工拉扣工艺的床垫，
+              8cm奢华顶垫柔弹软糯，用料环保可降解，对自己和环境都很温柔。
+            </p>
+            <span class="project-badge">旗舰系列 Flagship Series</span>
+            <button class="view-details-btn" onclick="openDreamIslandDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images">
+            <img class="img-main" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782408896298-20250910_M5800_33.jpg?auth_key=be557c3b2b7c0acfeb0a26e2ecfc5546e2c5972100c5ba7f58c3152be3fd2fd5" alt="梦屿系列卧室场景图" />
+            <img class="img-secondary" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782408900575-20250910_M5800P_44.jpg?auth_key=ff2474aa3b3bde13848619f48fa677898ddc6e1201709d35875c0310f509bdb2" alt="梦屿系列8cm顶垫细节图" />
+          </div>
+        </div>
+
+        <!-- 10. KUKA Tou Qi Hu Hu -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.72">
+          <div class="project-content">
+            <p class="project-year">2025</p>
+            <h3 class="project-name">透气呼呼<br />KUKA Breathable Series M5030/M5031</h3>
+            <p class="project-desc">
+              对标蓝盒子Z1、喜临门白骑士等2k价位段年轻系列床垫。
+              冬暖夏凉双面睡感，透气面料设计，为年轻人打造舒适睡眠体验。
+            </p>
+            <span class="project-badge">年轻系列 Youth Series</span>
+            <button class="view-details-btn" onclick="openTouqiDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images">
+            <img class="img-main" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782408628143-gujia202509094539.jpg?auth_key=001affb2109c1bcaa81244e3455e125f65b794f40b773059ca15ea2b8afa4423" alt="KUKA透气呼呼床垫产品图" />
+            <img class="img-secondary" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782138956620-质点睡饱饱.jpg?auth_key=cd9b50631481c5c2c1122550c81633529390e40a457919dbb950bd03d568de68" alt="质点奖卓越奖奖杯" />
+          </div>
+        </div>
+
+        <!-- 11. KUKA No.1 Mattress -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.75">
+          <div class="project-content">
+            <p class="project-year">2025</p>
+            <h3 class="project-name">一号垫<br />KUKA No.1 Mattress M7502</h3>
+            <p class="project-desc">
+              KUKA电商高端线年度力作。可更换填充层设计，左右分区独立调节睡感。
+              全垫0胶水工艺，聚焦腰部支撑。荣获2026质点奖卓越奖（最佳舒适家具·弹簧软床垫类）。
+            </p>
+            <span class="project-badge">质点奖卓越奖 Z-DOT Award</span>
+            <button class="view-details-btn" onclick="openNo1DetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images">
+            <img class="img-main" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782408984723-20260124顾家电商13127_2026_03_30.jpg?auth_key=bfab2068cd31ca3fb55eb8451d725854a52f2c6ded5a1df9557bcf977a5edbe4" alt="一号垫三层叠放产品图" />
+            <img class="img-secondary" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409004349-20260124顾家电商12473.jpg?auth_key=ec833f22c7ec454c300650266aa06cb1855b3250eee58628360ed81f682478ca" alt="一号垫侧面细节图" />
+            <img class="img-mobile-alt" src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782407988824-20260124顾家电商13127.jpg?auth_key=f3a507db716e8954a377460318bd72484c4db878621fda53b6c9d0dea5af1bd4" alt="一号垫产品图" style="display: none;" />
+          </div>
+        </div>
+
+        <!-- 12. KUKA Air Conditioner Mattress -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.85">
+          <div class="project-content">
+            <p class="project-year">2026</p>
+            <h3 class="project-name">1号空调垫<br />KUKA Smart Climate Mattress</h3>
+            <p class="project-desc">
+              KUKA电商年度力推系列，集成轻智能功能。
+              一件顶五件：床垫+电热毯+除螨仪+除湿机+电风扇，打造专属"睡眠座舱"。
+              微气候风控系统，有凉感无风感；真制暖分区锁温。
+            </p>
+            <span class="project-badge">智能气候 Smart Climate</span>
+            <button class="view-details-btn" onclick="openAirconDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images" style="grid-template-columns: 1fr; grid-template-rows: 1fr;">
+            <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409063803-20260427顾家电商床垫73278.jpg?auth_key=8fe24afddf423474f2cbc25b976e049f6ee4f9c72078b2053395dea2e0ffcdf2" alt="KUKA空调垫微气候系统" />
+          </div>
+        </div>
+
+        <!-- 13. Factory Visit & Fabric Sourcing -->
+        <div class="project-card featured" data-reveal style="--reveal-delay: 0.9">
+          <div class="project-content">
+            <p class="project-year">2024-2026</p>
+            <h3 class="project-name">工厂走访·面料溯源<br />Factory Visit & Fabric Sourcing</h3>
+            <p class="project-desc">
+              深入供应商工厂了解面料工艺及产品性能，受邀参与面料供应商发布会等活动，从源头把控产品品质。
+            </p>
+            <span class="project-badge">供应链溯源 Supply Chain</span>
+            <button class="view-details-btn" onclick="openFactoryVisitDetailPage()">
+              查看详情 View Details
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="project-images" style="grid-template-columns: 1fr; grid-template-rows: 1fr;">
+            <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782441015976-IMG_3753_heic.webp?auth_key=9d0e9e2fa31b2f49363b3d70adc7d909cd8ebcfbf0fd57aef4a98f0e8da76e7c" alt="工厂走访·面料溯源工作场景" />
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Experience section -->
+    <section id="experience">
+      <div data-reveal style="--reveal-delay: 0">
+        <p class="section-label">职业历程 Career Path</p>
+        <h2 class="section-title">从美院到睡眠创新<br />From art school to sleep innovation</h2>
+      </div>
+      
+      <div class="timeline">
+        <div class="timeline-item" data-reveal style="--reveal-delay: 0.1">
+          <div class="timeline-year">2019</div>
+          <div class="timeline-content">
+            <h3>中国美术学院 China Academy of Art</h3>
+            <p>产品设计专业毕业。毕设作品获林风眠创作奖铜奖。</p>
+          </div>
+        </div>
+        
+        <div class="timeline-item" data-reveal style="--reveal-delay: 0.2">
+          <div class="timeline-year">2018</div>
+          <div class="timeline-content">
+            <h3>米娅文化 Mia Culture — 实习 Intern</h3>
+            <p>产品设计师实习生，负责产品开发与概念设计。</p>
+          </div>
+        </div>
+        
+        <div class="timeline-item" data-reveal style="--reveal-delay: 0.3">
+          <div class="timeline-year">2019</div>
+          <div class="timeline-content">
+            <h3>良舍家居 Liangshe Home — 产品设计师 Product Designer</h3>
+            <p>家居产品设计，专注于极简住宅解决方案。</p>
+          </div>
+        </div>
+        
+        <div class="timeline-item" data-reveal style="--reveal-delay: 0.6">
+          <div class="timeline-year">2021–2025.4</div>
+          <div class="timeline-content">
+            <h3>喜临门家具 Sleemon Furniture — 设计师 Designer</h3>
+            <p>研发设计师，专注于睡眠科技与智能产品。主导isleep/AISE项目及国家级获奖创新。</p>
+          </div>
+        </div>
+
+        <div class="timeline-item" data-reveal style="--reveal-delay: 0.6">
+          <div class="timeline-year">2025.4–至今 Present</div>
+          <div class="timeline-content">
+            <h3>顾家家居 KUKAHOME — 产品设计专家 Product Design Expert</h3>
+            <p>卧室事业部 · 电商与流量中心。担任电商子品牌「瞌睡猫」产品设计负责人及子品牌产品设计师，后转岗为电商流量中心床垫设计师。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact / Footer -->
+    <footer id="contact">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>联系方式 Contact</h4>
+          <a href="mailto:2439653178@qq.com">2439653178@qq.com</a>
+          <a href="tel:+8613454535030">+86 134 5453 5030</a>
+        </div>
+        
+        <div class="footer-col">
+          <h4>导航 Navigation</h4>
+          <a href="#work">作品 Work</a>
+          <a href="#experience">经历 Experience</a>
+          <a href="#about">关于 About</a>
+        </div>
+        
+        <div class="footer-col">
+          <h4>奖项 Awards</h4>
+          <a href="#">金汐奖 — 金奖 Jinxi Award — Gold</a>
+          <a href="#">林风眠创作奖 — 铜奖 Lin Fengmian — Bronze</a>
+          <a href="#">质点奖 — 卓越奖 ×2 Z-DOT Award — Excellence ×2</a>
+        </div>
+        
+        <div class="footer-col">
+          <h4>所在地 Location</h4>
+          <p class="text-white/60 text-sm">浙江杭州 Hangzhou, Zhejiang<br />中国 China</p>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>© 2025 徐一鸣 Xu Yiming. 保留所有权利 All rights reserved.</p>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Detail Page Modal -->
+  <div id="detail-modal">
+    <button class="detail-close" onclick="closeDetailPage()">×</button>
+    <div class="detail-award-badge">
+      <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019854284-image22.png?auth_key=40618302a8c88c4552fc30c36fd1045006f9e35ab9ae128b2a029a02a74f1249" alt="金汐奖 GOtrend Award" />
+    </div>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2023 · isleep Series</p>
+        <h1 class="detail-title">AI空气能助眠床垫<br />AI Air Sleep Mattress</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          集成气压技术的智能睡眠系统，多层结构创新设计。荣获深圳金汐奖最佳创新智能寝具金奖，
+          与诺贝尔物理奖获得者在北京联合发布。重新定义智能睡眠体验。
+        </p>
+      </div>
+
+      <!-- Main Images -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019255995-image25.png?auth_key=877998177d2da8af45a06019b40e64d1b6e101087ef88cf72e690c6eb91b090f" alt="产品外观 Product View" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019266995-image24.png?auth_key=2382b49d01c21d92da748c7edae88ab758a2bfd20d19de56ca3bbe0de81072a8" alt="爆炸结构图 Exploded View" />
+      </div>
+
+      <!-- Alternative Options -->
+      <p class="detail-alternatives-label">备选方案 Alternative Options</p>
+      <div class="detail-alternatives">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019277226-image26.jpeg?auth_key=9b0fed16b0a3788edf3262d59858d71011d9135dffce4f600615b6726ba1cfa4" alt="备选方案一 Option 1" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019277229-image27.jpeg?auth_key=f90affa087955cbf192805a50d7cb5b3bcaca459801be85c5e71081026af84d0" alt="备选方案二 Option 2" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-21/1782019277233-image28.jpeg?auth_key=b5087e8949ceb16b145df924b38d1b4c7d6110a61f7f744f3496f34ca82dbf46" alt="备选方案三 Option 3" />
+      </div>
+    </div>
+  </div>
+
+  <!-- KUKA Detail Page Modal -->
+  <div id="kuka-detail-modal">
+    <button class="detail-close" onclick="closeKukaDetailPage()">×</button>
+    <div class="detail-award-badge">
+      <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782138956620-质点睡饱饱.jpg?auth_key=cd9b50631481c5c2c1122550c81633529390e40a457919dbb950bd03d568de68" alt="质点奖卓越奖 Z-DOT Award" />
+    </div>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2025 · KUKA Children's Series</p>
+        <h1 class="detail-title">睡饱饱·双睡Pro<br />KUKA Children's Mattress M5036</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          专利O胶儿童床垫，北大儿科专家权威推荐。荣获2026质点奖卓越奖（最佳安全家具·弹簧软床垫类）。
+          一垫两睡创新设计，亲肤无负担，KUKA电商渠道高客单价畅销产品。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409200421-20251202顾家电商床垫18015.jpg?auth_key=504f1b2a1c8e00e8f8378fb36d38a767e3ab4b8322180f5fff082543aa63d3e7" alt="孩子坐在床垫上抛玩具" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409200427-20251202顾家电商床垫18037.jpg?auth_key=cc6f1f02b98cfdd6308fd645be05b58e8e8158160f0379b972c381d620a8c18e" alt="孩子站在床垫上跳跃" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409200427-20251202顾家电商床垫18097.jpg?auth_key=4b76a8c14f35fc97a1f418ffb2a3cc4a16a4b3ef697ff0d3baafe8ecef94c4e5" alt="妈妈和孩子趴在床垫上看书" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409200432-20251202顾家电商床垫18291.jpg?auth_key=f0a1f4e373b9f7960c4cc8da645ee0923764875fe4b986c6cd6f9b097b93f4d7" alt="孩子爬上床垫侧面" />
+      </div>
+    </div>
+  </div>
+
+  <!-- No.1 Mattress Detail Page Modal -->
+  <div id="no1-detail-modal">
+    <button class="detail-close" onclick="closeNo1DetailPage()">×</button>
+    <div class="detail-award-badge">
+      <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782138956620-质点睡饱饱.jpg?auth_key=cd9b50631481c5c2c1122550c81633529390e40a457919dbb950bd03d568de68" alt="质点奖卓越奖 Z-DOT Award" />
+    </div>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2025 · KUKA Premium Series</p>
+        <h1 class="detail-title">一号垫·四季款<br />KUKA No.1 Mattress M7502</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          KUKA电商高端线年度力作。四种睡感四季合宜，面料可翻转、内芯可更换、全垫0胶水。
+          四叶草超声波O胶弹簧，灵敏感应随身而动。荣获2026质点奖卓越奖（最佳舒适家具·弹簧软床垫类）。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782410211873-20260124顾家电商12320.jpg?auth_key=aec6ecfbd44d09827da4de8b78a27e1a2aa455e240ff2eec93e164ef5719d91c" alt="KUKA No.1床垫全景图（橙色毯子装饰）" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782410211879-20260124顾家电商12473.jpg?auth_key=837d29e880b73841dbeabc3a1c51567045c27156b48cb6f4406ebd21d5bddc77" alt="模特侧卧在床垫上" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782410211880-20260124顾家电商12697.jpg?auth_key=4acf2f1ab81a694683f0d4cc7ec2479cf5446a00d570233cf8a53eed0a343285" alt="模特仰卧在床垫上触摸纱幔" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782410211883-20260124顾家电商13127_2026_03_30.jpg?auth_key=ad91ed67ce9d330c26cb488704ae43c15d65dd6b6d7f96f66b6c6b826b84b6b2" alt="三层叠放床垫展示（模特趴在最上层）" />
+      </div>
+    </div>
+  </div>
+
+  <!-- AISE Detail Page Modal -->
+  <div id="aise-detail-modal">
+    <button class="detail-close" onclick="closeAiseDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2024 · AISE Series</p>
+        <h1 class="detail-title">AISE 智能睡眠系统<br />AISE Smart Sleep System</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          跨界创作项目，梅耶·马斯克代言站台。2024上海CIFF展会C位亮相，提升品牌影响力。
+          融合科技与艺术，重新定义高端睡眠体验。
+        </p>
+      </div>
+
+      <!-- Main Image -->
+      <div style="margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150455820-image10.jpeg?auth_key=278b2b0cd19b6d83b3f8324919ddd77458c6e12695741c28a606f554cff75ba6" alt="AISE 智能睡眠系统产品图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+      </div>
+
+      <!-- Effect Images Grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150609424-image30.jpeg?auth_key=fe61b5d20332d42df411f3ac601fc262ae2fa17f254be2c21b9028d44fc69cd0" alt="AISE 暖色调场景效果图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150612416-image31.jpeg?auth_key=8e254f6f093149c69f1ee3397715bdf20e92f1174d3279b8fab48498defaaaac" alt="AISE 热带植物场景效果图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150614938-image32.jpeg?auth_key=42f65df7027a70f4a6a67bb6be6859345712107c8684d690a5fdc1f541c1adcf" alt="AISE 紫色调场景效果图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5; grid-column: 1 / -1;" />
+      </div>
+
+      <!-- Additional Product Images -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150739641-image33.jpeg?auth_key=5e95e0db37b501e36e21cd5e8b486079e1d94f56fd3d18e9409c652d1b7807f6" alt="AISE 展会现场展示图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150743184-image34.jpeg?auth_key=2da88aeb45924a57d00bd49ac4aa552cbf7e621845937de3398e7bde798fad4b" alt="AISE 梅耶·马斯克代言宣传图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150747179-image35.png?auth_key=0bae265b2a72190377f9663e3bbadfe66eaebe2a8f36585a180aa4a081316035" alt="AISE 俯拍床垫体验图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150750993-image37.png?auth_key=0a4f9fe6a6653be8e79a4e31501ab8307fb811ceb0587e455d38b9a24f5cc265" alt="AISE 侧卧睡眠体验图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782150753677-image36.jpeg?auth_key=42f1b7566714032c25d4d3d0b4814c2d383ffab6f8f9978ef8e0b3be4273fe35" alt="AISE 电梯广告展示图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5; grid-column: 1 / -1;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Dream Island Series Detail Page Modal -->
+  <div id="dream-island-detail-modal">
+    <button class="detail-close" onclick="closeDreamIslandDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2025 · KUKA Dream Island Series</p>
+        <h1 class="detail-title">梦屿系列<br />KUKA Dream Island Series</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          KUKA电商最高端产品系列，全系采用0胶水工艺。可拆卸设计支持调节软硬等级，
+          左右分区独立睡感。KUKA电商唯一一款带顶垫且具有手工拉扣工艺的床垫，
+          8cm奢华顶垫柔弹软糯，用料环保可降解，对自己和环境都很温柔。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409620019-20250910_M5800_38.jpg?auth_key=284de98b495e9984707eb66d568c839bf814dd615e72bd337ccf534fe6497e30" alt="梦屿系列卧室场景全景图" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409620019-20250910_M5800P_28.jpg?auth_key=f379e5eca18585428d44945ecfdbf282be268b70a21d0b7775bc819f73bad48c" alt="梦屿系列可拆卸顶垫展示" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409620021-20250910_M5800P_44.jpg?auth_key=62d172bc77df00128022f5b908aa70bfae4904f5e1bd5051c13da254859bc412" alt="梦屿系列侧面细节特写" />
+      </div>
+    </div>
+  </div>
+
+  <!-- AISE Soft Bed Detail Page Modal -->
+  <div id="aise-bed-detail-modal">
+    <button class="detail-close" onclick="closeAiseBedDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2024 · AISE Series</p>
+        <h1 class="detail-title">AISE 软床<br />AISE Soft Bed</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          AISE品牌跨界创作项目，融合科技与艺术的高端软床设计。
+          流线型框架搭配精致床垫，重新定义卧室美学体验。
+        </p>
+      </div>
+
+      <!-- Waterfall Layout for All Images -->
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782287288602-image11.png?auth_key=8f6c90aa7ba91c2e557a6dc850b553d9f0d484621356b0c3f5235c2062abff17" alt="AISE软床产品图" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782295550600-image42.png?auth_key=a62a053f9c7096c6f9f02f1c2665d428523b605503365353ae3e925b5736f5cf" alt="AISE软床红色款正面" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782295550598-image43.png?auth_key=87862dd493de5093fd223d78b85c0aec5b4d50997252225e69585f8f8d1229f8" alt="AISE软床白色款侧面" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782295550598-image44.png?auth_key=6d8877d2ece6dac025297d31cb32f467f4b122edf8fe533b164e047877210918" alt="AISE软床细节特写" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782295550598-image45.png?auth_key=c180d689099d41760e74593ef8109373f3579526f1cc761aea19c2a1104aea0e" alt="AISE软床蓝色款" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Graduation Project Detail Page Modal -->
+  <div id="grad-detail-modal">
+    <button class="detail-close" onclick="closeGradDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2019 · China Academy of Art</p>
+        <h1 class="detail-title">毕业设计<br />Graduation Project — CAA</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          中国美术学院毕业创作暨林风眠创作奖铜奖项目。
+          探索产品设计与艺术表达的融合边界，从概念到实物的完整创作过程。
+        </p>
+      </div>
+
+      <!-- Waterfall Layout for All Images -->
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782292361886-image12.jpeg?auth_key=50a030d350a954156a1edc047aacca9cfd0ecfb9e965acdf0667d2c232d1c887" alt="毕业设计作品展示" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782293034516-image13.jpeg?auth_key=857098b2a3c75ab158a7aea5916aa554cd452110a44349e149103a7fd162396a" alt="毕业设计作品细节" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782293034521-image14.jpeg?auth_key=a08b4ad6c57d23922e2462439aeb7f6fb5861563759c5de53504ecc9f3318bb8" alt="毕业设计制作过程" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782293034524-image15.jpeg?auth_key=682d29855bc432ddacb3e634ee6fc480af6b9b577e3c0ca22533eb5c2e7c2e70" alt="毕业设计内部结构" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782293034529-image16.jpeg?auth_key=ca8e01a90725e80185343eacbbf0e22a2e06fb1b1985c54d09e82856dee831cc" alt="学位证书与获奖证书" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- SLEEMON Shenzhen Exhibition Detail Page Modal -->
+  <div id="sleemon-detail-modal">
+    <button class="detail-close" onclick="closeSleemonDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2024 · SLEEMON Shenzhen Exhibition</p>
+        <h1 class="detail-title">深圳展会统筹<br />Shenzhen Exhibition Curation</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          统筹喜临门2024深圳展会，打造深度好睡眠主题展厅。
+          6款产品提交，3款中标，负责产品开发及讲解培训。
+        </p>
+      </div>
+
+      <!-- Waterfall Layout for All Images -->
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782309520695-image47.png?auth_key=b893c9eab67fdacca408d45c2d19653c8a42178f2488a634639e5a193570aab9" alt="喜临门床垫产品图" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782309520703-image48.jpeg?auth_key=e3765377abd639eb58fd9dbc1ec4fe36414d4dde1679159011a7e91184b66116" alt="喜临门深度好睡眠展厅米色床" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782309520697-image49.jpeg?auth_key=c44b7975c98edc430422c56eb0f9334400d2636c0f87b0b8fd08ea84a0ba310f" alt="喜临门深度好睡眠展厅紫色床" style="width: 100%; height: auto; display: block; margin-bottom: 1rem; break-inside: avoid; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Sleep Detection Band Detail Page Modal -->
+  <div id="sleep-band-detail-modal">
+    <button class="detail-close" onclick="closeSleepBandDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2023 · SLEEMON Concept Design</p>
+        <h1 class="detail-title">睡眠检测带设计<br />Sleep Detection Band</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          喜临门的一次大胆创意尝试。探索可穿戴设备与睡眠监测的融合边界，
+          将科技美学融入日常睡眠体验。多款配色方案展现不同的设计语言。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782310887658-image17.jpeg?auth_key=9829d00ccb12478e0ff2df05f988aa17756fd8a9635bfdd0dd5d4270218bd573" alt="睡眠检测带深蓝与青色配色" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782310887661-image18.png?auth_key=ab0cc1fd4068f929d5938554b3d7799a1c8774a3c0fb58e724d734c7762e6b4a" alt="睡眠检测带荧光绿与青色配色" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782310887671-image19.png?auth_key=2c9cf3ad1723c093d36b258ffcea12d10cf1d2bb478944f3239521ff467a2d3e" alt="睡眠检测带黑色与浅蓝配色" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782310887672-image20.jpeg?auth_key=d0732ad2ceb47d365077b83593fbebcbdb9cda678ca69b9ae5c17d38d0e786f3" alt="睡眠检测带三色对比展示" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- KUKA Tou Qi Hu Hu Detail Page Modal -->
+  <div id="touqi-detail-modal">
+    <button class="detail-close" onclick="closeTouqiDetailPage()">×</button>
+    <div class="detail-award-badge">
+      <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-22/1782138956620-质点睡饱饱.jpg?auth_key=cd9b50631481c5c2c1122550c81633529390e40a457919dbb950bd03d568de68" alt="质点奖卓越奖 Z-DOT Award" />
+    </div>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2025 · KUKA Youth Series</p>
+        <h1 class="detail-title">透气呼呼·双面睡感<br />KUKA Breathable M5030/M5031</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          对标蓝盒子Z1、喜临门白骑士等2k价位段年轻系列床垫。
+          冬暖夏凉双面睡感，可拆顶垫轻松翻转，呼吸AB面设计。
+          荣获中国家纺行业协会2026"优眠好品"奖。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409758102-gujia202509094539.jpg?auth_key=0de92e39095c6dafc1a8d03e624877df66ae3602815e6f049383ac7672c83075" alt="模特躺在三层叠放床垫上伸展" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409758103-gujia202509094741.jpg?auth_key=a883170ba330175de86c10bab22af8a4fe26ae634888af25c3ddc295375ae10f" alt="模特在灰色床垫上做仰卧起坐" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409758103-gujia202509095396.jpg?auth_key=fdd08ee9c52b24e4c518c01ad27a455a14d8e01a6100e33356f8bd131f5c7ed1" alt="模特坐在双层床垫上看书" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409758106-gujia202509096758.jpg?auth_key=cb26eda9ad17525f3c191479a7eb4c0eb46222f3363bfa61b06dfae8df5bb1d5" alt="两位模特分别躺在粉色和蓝色床垫上" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Catzz Soft Bed Detail Page Modal -->
+  <div id="catzz-detail-modal">
+    <button class="detail-close" onclick="closeCatzzDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2025 · Catzz Innovative Design</p>
+        <h1 class="detail-title">瞌睡猫软床·创新设计<br />Catzz Soft Bed — Youth Sleep Aesthetics</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          负责瞌睡猫产品时的创新设计作品。探索年轻化睡眠美学，
+          将趣味设计与舒适体验融合，打造专属年轻人的软床产品。
+          多色可选，满足不同审美偏好。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 3rem;">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782312321056-1_46.png?auth_key=427f5099dad6aba2140483f2961edd061c4d0b7fef661b54a6f5abd41f4263ba" alt="白色/蓝色款侧面图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782312653104-1_50.png?auth_key=a8524f24a9ff1000044ea7fd95f33300313ca0b73f99d09c8e8db5c33f655339" alt="深蓝色款正面图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782312653107-1_51.png?auth_key=f75f7b48cf1077d74a08372394af062dd9a68146020d704371fd3f201083277d" alt="深蓝色款床头板特写" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782312653110-1_53.png?auth_key=3979c70cd45efe465b766d72056a0caebeb7a817c8322266c5193d25ce56e1c5" alt="橙黄色款正面图" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-24/1782312653116-1_54.png?auth_key=ba71dceb8e53ee0373218ee5eff96167e8447c8b43df6b05de2bbb071e5df4cd" alt="橙黄色款床头板特写" style="width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: #f5f5f5;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- KUKA Air Conditioner Mattress Detail Page Modal -->
+  <div id="aircon-detail-modal">
+    <button class="detail-close" onclick="closeAirconDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2026 · KUKA Smart Climate System</p>
+        <h1 class="detail-title">1号空调垫·微气候睡眠系统<br />KUKA Smart Climate Mattress — 5-in-1 Sleep Pod</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          KUKA电商年度力推系列，集成轻智能功能。
+          一件顶五件：床垫+电热毯+除螨仪+除湿机+电风扇，打造专属"睡眠座舱"。
+          微气候风控系统，有凉感无风感；真制暖分区锁温；真安全低噪运行；真除螨A级认证；真凉爽3D网眼面料。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409833196-20260427顾家电商床垫73385.jpg?auth_key=8fe24afddf423474f2cbc25b976e049f6ee4f9c72078b2053395dea2e0ffcdf2" alt="模特坐在床垫上（蓝灰色渐变背景）" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409833198-20260427顾家电商床垫73567.jpg?auth_key=cc6f1f02b98cfdd6308fd645be05b58e8e8158160f0379b972c381d620a8c18e" alt="模特侧卧在床垫上" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409833197-20260427顾家电商床垫73860.jpg?auth_key=4b76a8c14f35fc97a1f418ffb2a3cc4a16a4b3ef697ff0d3baafe8ecef94c4e5" alt="模特趴在床垫上看书" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-25/1782409833199-20260427顾家电商床垫74327.jpg?auth_key=f0a1f4e373b9f7960c4cc8da645ee0923764875fe4b986c6cd6f9b097b93f4d7" alt="模特坐在床垫上盖被子" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Factory Visit Detail Page Modal -->
+  <div id="factory-visit-detail-modal">
+    <button class="detail-close" onclick="closeFactoryVisitDetailPage()">×</button>
+    <div class="detail-content">
+      <div class="detail-header">
+        <p class="detail-subtitle">2024-2026 · KUKA Supply Chain</p>
+        <h1 class="detail-title">工厂走访·面料溯源<br />Factory Visit & Fabric Sourcing</h1>
+        <p class="hero-description" style="max-width: 800px;">
+          深入供应商一线，实地了解面料工艺及产品性能。
+          受邀参与面料供应商发布会，与研发团队共同探讨材料创新方向。
+          从源头把控品质，确保每一款产品都经得起检验。
+        </p>
+      </div>
+
+      <!-- Main Images & Details Grid -->
+      <div class="detail-main-images">
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442766861-IMG_3757_heic.webp?auth_key=9cac2d538761fbd673f6596b67b37d4578472b6cec8fa3153492abb9a017a155" alt="贝卡特德思丽2022新品发布会NEO主题背景墙" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442591909-IMG_3751_heic.webp?auth_key=06bc1e141f065a61527644bec3536265627f44b5619d85436343a472b0b1a8e8" alt="工厂针织机器纱线卷轴全景" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442607666-IMG_3752_heic.webp?auth_key=a32ab91ead5cbcc7ee3b6045ba3af6fca493e1a9c89da37abf30cdf61a380f6d" alt="针织机多层纱线卷轴排列" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442607666-IMG_3753_heic.webp?auth_key=63c5bbcc85a7f386b283ad3ccdec397035d35193260ff2e358fd0ce8a03b6cd9" alt="圆形针织机顶部结构特写" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442625195-IMG_3754_heic.webp?auth_key=9b301bbcdbbde3f92e523e05c1d0da2a05336330a1bfe976881354adb4576a7c" alt="工厂车间顶部管道与照明设备" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442625191-IMG_3755_heic.webp?auth_key=8e4078d05e77d3c039ea9a168c4164a6c37f021a1ee15b8e1c2bc9ed242335d1" alt="NEO品牌针织机头细节特写" />
+        <img src="https://conversation.cdn.meoo.host/conversations/326616535051423744/image/2026-06-26/1782442637636-IMG_3756_heic.webp?auth_key=64ac62491590e14e985e10c02d1f2b0ec1e645f7d987305e944477c4af2f0305" alt="针织机马达与纱线卷轴组合视角" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Page loaded immediately for static background
+    document.body.dataset.loaded = 'true';
+
+    // Arc Reveal Hero Implementation
+    (function() {
+      const greetings = ['Minimal.', 'Restrained.', 'Organic.', 'Ordered.', 'Aesthetic.', 'Calm.', 'Honest.', 'Ready.'];
+      const overlay = document.getElementById('arc-reveal-overlay');
+      const greetingEl = document.getElementById('arc-greeting');
+      const arcPath = document.getElementById('arc-path');
+
+      if (!overlay || !greetingEl || !arcPath) return;
+
+      // Check if already shown in this session
+      const storageKey = 'arc-reveal-shown';
+      let alreadyShown = false;
+      try {
+        if (window.sessionStorage.getItem(storageKey) === 'done') {
+          alreadyShown = true;
+          overlay.classList.add('hidden');
+          // Make content visible immediately
+          document.querySelectorAll('.content-entrance').forEach((el) => {
+            el.classList.add('visible');
+          });
+          return;
+        }
+      } catch (e) {
+        // sessionStorage may throw in private mode
+      }
+
+      let currentIndex = 0;
+      const greetingHold = 620;
+      const revealDuration = 1500;
+
+      // Show first greeting
+      function showGreeting(index) {
+        greetingEl.textContent = greetings[index];
+        greetingEl.className = 'arc-greeting active';
+
+        setTimeout(() => {
+          if (index < greetings.length - 1) {
+            // Exit current greeting
+            greetingEl.className = 'arc-greeting exit';
+            setTimeout(() => {
+              showGreeting(index + 1);
+            }, 220);
+          } else {
+            // Last greeting, start reveal
+            setTimeout(startReveal, greetingHold + 220);
+          }
+        }, greetingHold);
+      }
+
+      // Start curtain reveal animation
+      function startReveal() {
+        const startTime = performance.now();
+
+        function animate(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / revealDuration, 1);
+
+          // Easing: ease-in-out cubic
+          const eased = progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+          // Calculate arc position
+          // edge goes from 110 (off-screen below) to -30 (off-screen above)
+          const edge = 110 - eased * 140;
+          const control = edge + 25;
+
+          arcPath.setAttribute('d', `M 0 ${edge} Q 50 ${control} 100 ${edge} L 100 110 L 0 110 Z`);
+
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            // Animation complete, hide overlay
+            overlay.classList.add('hidden');
+            try {
+              window.sessionStorage.setItem(storageKey, 'done');
+            } catch (e) {
+              // ignore
+            }
+
+            // Trigger content entrance animation
+            setTimeout(() => {
+              document.querySelectorAll('.content-entrance').forEach((el, index) => {
+                setTimeout(() => {
+                  el.classList.add('visible');
+                }, index * 100);
+              });
+            }, 200);
+          }
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      // Start the sequence
+      showGreeting(0);
+    })();
+
+    // Detail page modal functions
+    function openDetailPage() {
+      const modal = document.getElementById('detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDetailPage() {
+      const modal = document.getElementById('detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // KUKA detail page modal functions
+    function openKukaDetailPage() {
+      const modal = document.getElementById('kuka-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeKukaDetailPage() {
+      const modal = document.getElementById('kuka-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // No.1 Mattress detail page modal functions
+    function openNo1DetailPage() {
+      const modal = document.getElementById('no1-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeNo1DetailPage() {
+      const modal = document.getElementById('no1-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // AISE detail page modal functions
+    function openAiseDetailPage() {
+      const modal = document.getElementById('aise-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAiseDetailPage() {
+      const modal = document.getElementById('aise-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Dream Island Series detail page modal functions
+    function openDreamIslandDetailPage() {
+      const modal = document.getElementById('dream-island-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDreamIslandDetailPage() {
+      const modal = document.getElementById('dream-island-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // AISE Soft Bed detail page modal functions
+    function openAiseBedDetailPage() {
+      const modal = document.getElementById('aise-bed-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAiseBedDetailPage() {
+      const modal = document.getElementById('aise-bed-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Graduation Project detail page modal functions
+    function openGradDetailPage() {
+      const modal = document.getElementById('grad-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeGradDetailPage() {
+      const modal = document.getElementById('grad-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // SLEEMON Shenzhen Exhibition detail page modal functions
+    function openSleemonDetailPage() {
+      const modal = document.getElementById('sleemon-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSleemonDetailPage() {
+      const modal = document.getElementById('sleemon-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Sleep Detection Band detail page modal functions
+    function openSleepBandDetailPage() {
+      const modal = document.getElementById('sleep-band-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSleepBandDetailPage() {
+      const modal = document.getElementById('sleep-band-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // KUKA Tou Qi Hu Hu detail page modal functions
+    function openTouqiDetailPage() {
+      const modal = document.getElementById('touqi-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeTouqiDetailPage() {
+      const modal = document.getElementById('touqi-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Catzz Soft Bed detail page modal functions
+    function openCatzzDetailPage() {
+      const modal = document.getElementById('catzz-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCatzzDetailPage() {
+      const modal = document.getElementById('catzz-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // KUKA Air Conditioner Mattress detail page modal functions
+    function openAirconDetailPage() {
+      const modal = document.getElementById('aircon-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAirconDetailPage() {
+      const modal = document.getElementById('aircon-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Factory Visit detail page modal functions
+    function openFactoryVisitDetailPage() {
+      const modal = document.getElementById('factory-visit-detail-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeFactoryVisitDetailPage() {
+      const modal = document.getElementById('factory-visit-detail-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDetailPage();
+        closeKukaDetailPage();
+        closeNo1DetailPage();
+        closeAiseDetailPage();
+        closeDreamIslandDetailPage();
+        closeAiseBedDetailPage();
+        closeGradDetailPage();
+        closeSleemonDetailPage();
+        closeSleepBandDetailPage();
+        closeTouqiDetailPage();
+        closeCatzzDetailPage();
+        closeAirconDetailPage();
+        closeFactoryVisitDetailPage();
+      }
+    });
+
+    // Image Lightbox with FLIP animation
+    (function() {
+      const lightbox = document.getElementById('image-lightbox');
+      const lightboxImg = lightbox ? lightbox.querySelector('img') : null;
+      let currentTrigger = null;
+      let flipState = null;
+
+      if (!lightbox || !lightboxImg) return;
+
+      // Add click handler to all images in project cards and gallery
+      function addImageClickHandlers() {
+        document.querySelectorAll('.project-images img, .gallery-item img').forEach((img) => {
+          img.style.cursor = 'zoom-in';
+          img.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openLightbox(this);
+          });
+        });
+      }
+
+      function openLightbox(triggerImg) {
+        currentTrigger = triggerImg;
+
+        const rect = triggerImg.getBoundingClientRect();
+
+        flipState = {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height
+        };
+
+        lightboxImg.src = triggerImg.src;
+
+        lightboxImg.style.position = 'fixed';
+        lightboxImg.style.top = rect.top + 'px';
+        lightboxImg.style.left = rect.left + 'px';
+        lightboxImg.style.width = rect.width + 'px';
+        lightboxImg.style.height = rect.height + 'px';
+        lightboxImg.style.transform = 'scale(1)';
+
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const viewportWidth = window.innerWidth * 0.9;
+            const viewportHeight = window.innerHeight * 0.9;
+
+            const scaleX = viewportWidth / rect.width;
+            const scaleY = viewportHeight / rect.height;
+            const scale = Math.min(scaleX, scaleY, 3);
+
+            const centerX = (window.innerWidth - rect.width * scale) / 2;
+            const centerY = (window.innerHeight - rect.height * scale) / 2;
+
+            lightboxImg.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            lightboxImg.style.top = centerY + 'px';
+            lightboxImg.style.left = centerX + 'px';
+            lightboxImg.style.width = (rect.width * scale) + 'px';
+            lightboxImg.style.height = (rect.height * scale) + 'px';
+          });
+        });
+      }
+
+      function closeLightbox() {
+        if (!currentTrigger || !flipState) return;
+
+        lightboxImg.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+        lightboxImg.style.top = flipState.top + 'px';
+        lightboxImg.style.left = flipState.left + 'px';
+        lightboxImg.style.width = flipState.width + 'px';
+        lightboxImg.style.height = flipState.height + 'px';
+
+        setTimeout(() => {
+          lightbox.classList.remove('active');
+          document.body.style.overflow = '';
+          lightboxImg.src = '';
+          currentTrigger = null;
+          flipState = null;
+        }, 400);
+      }
+
+      lightbox.addEventListener('click', closeLightbox);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+          closeLightbox();
+        }
+      });
+
+      addImageClickHandlers();
+
+      const observer = new MutationObserver(() => {
+        addImageClickHandlers();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    })();
+    // Circular Testimonials Logic
+    (function() {
+      const imageContainer = document.getElementById('testimonial-image-container');
+      if (!imageContainer) return;
+
+      const images = Array.from(imageContainer.querySelectorAll('.testimonial-image'));
+      const nameEl = document.getElementById('testimonial-name');
+      const designationEl = document.getElementById('testimonial-designation');
+      const quoteEl = document.getElementById('testimonial-quote');
+      const prevBtn = document.getElementById('testimonial-prev');
+      const nextBtn = document.getElementById('testimonial-next');
+
+      // Testimonial data
+      const testimonials = [
+        {
+          name: '深圳展会统筹',
+          designation: 'Shenzhen Exhibition Curation — 2024',
+          quote: '统筹喜临门2024深圳展会。6款产品提交，3款中标。负责产品开发及讲解培训。'
+        },
+        {
+          name: 'FSM欢乐颂护脊版',
+          designation: 'FSM Huanlesong Spine Care — 2023',
+          quote: 'FSM法诗曼欢乐颂 人体工学护脊床垫，2023年9月上市。2024年出货54,800张。国内总销售额TOP2。'
+        },
+        {
+          name: '锦绣未央宫喜联名',
+          designation: 'Jinxiu Weiyang Palace Collection — 2023',
+          quote: '锦绣未央床垫 宫喜联名款 高端床垫系列，2023年11月上市。2024年出货19,600张。国内新品销售额TOP2。'
+        }
+      ];
+
+      let activeIndex = 0;
+      const totalItems = testimonials.length;
+      let containerWidth = 1200;
+      let autoplayInterval = null;
+
+      // Calculate responsive gap
+      function calculateGap(width) {
+        const minWidth = 1024;
+        const maxWidth = 1456;
+        const minGap = 60;
+        const maxGap = 86;
+
+        if (width <= minWidth) return minGap;
+        if (width >= maxWidth) return Math.max(minGap, maxGap + 0.06018 * (width - maxWidth));
+        return minGap + (maxGap - minGap) * ((width - minWidth) / (maxWidth - minWidth));
+      }
+
+      // Update image positions
+      function updateImagePositions() {
+        const gap = calculateGap(containerWidth);
+        const maxStickUp = gap * 0.8;
+
+        images.forEach((img, index) => {
+          const isActive = index === activeIndex;
+          const isLeft = (activeIndex - 1 + totalItems) % totalItems === index;
+          const isRight = (activeIndex + 1) % totalItems === index;
+
+          if (isActive) {
+            img.style.zIndex = '3';
+            img.style.opacity = '1';
+            img.style.pointerEvents = 'auto';
+            img.style.transform = `translateX(0px) translateY(0px) scale(1) rotateY(0deg)`;
+          } else if (isLeft) {
+            img.style.zIndex = '2';
+            img.style.opacity = '1';
+            img.style.pointerEvents = 'auto';
+            img.style.transform = `translateX(-${gap}px) translateY(-${maxStickUp}px) scale(0.85) rotateY(15deg)`;
+          } else if (isRight) {
+            img.style.zIndex = '2';
+            img.style.opacity = '1';
+            img.style.pointerEvents = 'auto';
+            img.style.transform = `translateX(${gap}px) translateY(-${maxStickUp}px) scale(0.85) rotateY(-15deg)`;
+          } else {
+            img.style.zIndex = '1';
+            img.style.opacity = '0';
+            img.style.pointerEvents = 'none';
+          }
+        });
+      }
+
+      // Update text content with word-by-word animation
+      function updateTextContent() {
+        const testimonial = testimonials[activeIndex];
+
+        // Update name and designation
+        nameEl.textContent = testimonial.name;
+        designationEl.textContent = testimonial.designation;
+
+        // Clear and rebuild quote with word animation
+        quoteEl.innerHTML = '';
+        const words = testimonial.quote.split(' ');
+        words.forEach((word, i) => {
+          const span = document.createElement('span');
+          span.className = 'testimonial-word';
+          span.textContent = word + '\u00a0';
+          span.style.filter = 'blur(10px)';
+          span.style.opacity = '0';
+          span.style.transform = 'translateY(5px)';
+          quoteEl.appendChild(span);
+
+          // Animate each word with delay
+          setTimeout(() => {
+            span.style.filter = 'blur(0px)';
+            span.style.opacity = '1';
+            span.style.transform = 'translateY(0)';
+          }, 50 + i * 25);
+        });
+      }
+
+      // Navigation handlers
+      function goToNext() {
+        activeIndex = (activeIndex + 1) % totalItems;
+        updateImagePositions();
+        updateTextContent();
+      }
+
+      function goToPrev() {
+        activeIndex = (activeIndex - 1 + totalItems) % totalItems;
+        updateImagePositions();
+        updateTextContent();
+      }
+
+      // Autoplay
+      function startAutoplay() {
+        stopAutoplay();
+        autoplayInterval = setInterval(goToNext, 5000);
+      }
+
+      function stopAutoplay() {
+        if (autoplayInterval) {
+          clearInterval(autoplayInterval);
+          autoplayInterval = null;
+        }
+      }
+
+      // Resize handler
+      function handleResize() {
+        if (imageContainer) {
+          containerWidth = imageContainer.offsetWidth;
+          updateImagePositions();
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+
+      // Event listeners
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          goToPrev();
+          stopAutoplay();
+          startAutoplay();
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          goToNext();
+          stopAutoplay();
+          startAutoplay();
+        });
+      }
+
+      // Pause on hover
+      imageContainer.addEventListener('mouseenter', stopAutoplay);
+      imageContainer.addEventListener('mouseleave', startAutoplay);
+
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+          goToPrev();
+          stopAutoplay();
+          startAutoplay();
+        }
+        if (e.key === 'ArrowRight') {
+          goToNext();
+          stopAutoplay();
+          startAutoplay();
+        }
+      });
+
+      // Initialize
+      handleResize();
+      updateImagePositions();
+      updateTextContent();
+      startAutoplay();
+    })();
+
+    // Scroll-driven parallax blur effect
+    const bgElement = document.getElementById('video-bg');
+    const scrollOverlay = document.getElementById('scroll-overlay');
+
+    window.addEventListener('scroll', () => {
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const scrollFraction = Math.max(0, Math.min(1, window.scrollY / maxScroll));
+
+      // Calculate blur amount: 0 at top/bottom, max in middle
+      // Use a bell curve: blur peaks at 50% scroll
+      const blurAmount = Math.sin(scrollFraction * Math.PI) * 20; // Max 20px blur at 50% scroll
+
+      // Calculate overlay opacity: 0 at top/bottom, 1 in middle
+      // Use same bell curve for smooth transition
+      const overlayOpacity = Math.sin(scrollFraction * Math.PI);
+
+      // Apply effects
+      if (bgElement) {
+        bgElement.style.filter = `blur(${blurAmount}px)`;
+      }
+      if (scrollOverlay) {
+        scrollOverlay.style.opacity = overlayOpacity;
+      }
+    }, { passive: true });
+
+    // GSAP scroll reveal
+    if (window.gsap && window.ScrollTrigger) {
+      gsap.registerPlugin(ScrollTrigger);
+      document.querySelectorAll('[data-scroll-reveal]').forEach((el) => {
+        const text = el.textContent || '';
+        el.textContent = '';
+        el.classList.add('scroll-reveal');
+        const p = document.createElement('p');
+        p.className = 'scroll-reveal-text ' + (el.dataset.textClass || '');
+        text.split(/(\s+)/).forEach((part) => {
+          if (!part) return;
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = part;
+          p.appendChild(span);
+        });
+        el.appendChild(p);
+        
+        gsap.fromTo(el, { rotate: 3, transformOrigin: '0% 50%' },
+          { rotate: 0, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom bottom', scrub: true } });
+        
+        gsap.fromTo(p.querySelectorAll('.word'), { opacity: 0.1 },
+          { opacity: 1, stagger: 0.05, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom-=20%', end: 'bottom bottom', scrub: true } });
+        
+        gsap.fromTo(p.querySelectorAll('.word'), { filter: 'blur(4px)' },
+          { filter: 'blur(0px)', stagger: 0.05, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom-=20%', end: 'bottom bottom', scrub: true } });
+      });
+    }
+    
+    // IntersectionObserver reveal
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.dataset.reveal = 'visible';
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '-50px' });
+    
+    document.querySelectorAll('[data-reveal]').forEach((el) => revealObserver.observe(el));
+
+    // Button click bounce effect
+    document.querySelectorAll('.hero-cta, .nav-link').forEach((btn) => {
+      btn.addEventListener('click', function(e) {
+        this.classList.add('animate-bounce');
+        setTimeout(() => {
+          this.classList.remove('animate-bounce');
+        }, 600);
+      });
+    });
+  </script>
+
+  <!-- Image Lightbox -->
+  <div id="image-lightbox">
+    <img id="lightbox-image" src="" alt="Full size image" />
+  </div>
+</body>
+</html>
